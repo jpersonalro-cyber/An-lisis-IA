@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
-import numpy as np
+import time
 from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
@@ -10,221 +10,222 @@ from sklearn.metrics import silhouette_score
 # =========================
 # CONFIG
 # =========================
-st.set_page_config(page_title="Dashboard Propuestas", layout="wide")
+st.set_page_config(page_title="Propuestas IA", layout="wide")
+
+theme = st.get_option("theme.base")
 
 # =========================
-# 🎨 ESTILO DASHBOARD SOFT UI
+# 🎨 MODO DINÁMICO
 # =========================
-st.markdown("""
+if theme == "dark":
+    bg = "#0f172a"
+    card = "#1e293b"
+    text = "#e2e8f0"
+    accent = "#3b82f6"
+    shadow = "none"
+else:
+    bg = "#f4f7fb"
+    card = "#f4f7fb"
+    text = "#1a1a1a"
+    accent = "#007BFF"
+    shadow = "8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff"
+
+st.markdown(f"""
 <style>
-body { background: #f4f7fb; }
+body {{
+    background:{bg};
+    color:{text};
+}}
 
-.title {
+.title {{
     text-align:center;
     font-size:42px;
     font-weight:700;
-    color:#1a1a1a;
-}
+}}
 
-.subtitle {
+.subtitle {{
     text-align:center;
-    color:#5f6b7a;
-    margin-bottom:25px;
-}
+    opacity:0.7;
+}}
 
-.card {
-    background:#f4f7fb;
+.card {{
+    background:{card};
     padding:20px;
     border-radius:20px;
-    box-shadow: 8px 8px 16px #d1d9e6,
-                -8px -8px 16px #ffffff;
+    box-shadow:{shadow};
     margin-bottom:20px;
-}
+    transition:0.3s;
+}}
 
-.stButton>button {
-    background: linear-gradient(135deg, #007BFF, #00A8FF);
+.card:hover {{
+    transform: translateY(-5px);
+}}
+
+.stButton>button {{
+    background: linear-gradient(135deg, {accent}, #00A8FF);
     color:white;
     border-radius:12px;
     height:50px;
-}
+}}
 
-section[data-testid="stSidebar"] {
-    background:#f4f7fb;
-}
+.loader {{
+    text-align:center;
+    font-size:18px;
+    animation: fade 1s infinite alternate;
+}}
+
+@keyframes fade {{
+    from {{opacity:0.4;}}
+    to {{opacity:1;}}
+}}
 </style>
 """, unsafe_allow_html=True)
 
 # =========================
 # SIDEBAR
 # =========================
-st.sidebar.title("⚙️ Panel")
-
+st.sidebar.title("⚙️ Panel IA")
 url = st.sidebar.text_input("📂 CSV URL")
 analizar = st.sidebar.button("🚀 Analizar")
 
 # =========================
 # HEADER
 # =========================
-st.markdown('<div class="title">📊 Dashboard de Propuestas</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">IA para detectar ideas y generar propuestas</div>', unsafe_allow_html=True)
+icon = "🌙" if theme == "dark" else "☀️"
+
+st.markdown(f'<div class="title">{icon} Dashboard Inteligente</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Análisis emocional + generación de propuestas</div>', unsafe_allow_html=True)
 
 # =========================
 # FUNCIONES IA
 # =========================
 def limpiar(texto):
     texto = texto.lower()
-    texto = re.sub(r"http\S+", "", texto)
     texto = re.sub(r"[^\w\s]", "", texto)
     return texto
 
-def obtener_mejor_k(X, max_k=5):
-    mejor_k = 2
-    mejor_score = -1
+def mejor_k(X):
+    n = X.shape[0]
+    if n < 4:
+        return 2
     
-    for k in range(2, min(max_k, X.shape[0]) + 1):
-        modelo = KMeans(n_clusters=k, random_state=42, n_init=10)
-        labels = modelo.fit_predict(X)
-        
-        if len(set(labels)) > 1:
+    best_k = 2
+    best_score = -1
+
+    for k in range(2, min(5, n-1)+1):
+        try:
+            model = KMeans(n_clusters=k, random_state=42, n_init=10)
+            labels = model.fit_predict(X)
+
+            if len(set(labels)) < 2:
+                continue
+
             score = silhouette_score(X, labels)
-            if score > mejor_score:
-                mejor_score = score
-                mejor_k = k
-                
-    return mejor_k
+
+            if score > best_score:
+                best_score = score
+                best_k = k
+        except:
+            continue
+
+    return best_k
 
 # =========================
 # EJECUCIÓN
 # =========================
 if analizar:
 
+    if not url:
+        st.warning("⚠️ Ingresa un CSV")
+        st.stop()
+
+    # Loader (UX premium)
+    placeholder = st.empty()
+    placeholder.markdown('<div class="loader">🤖 Analizando datos...</div>', unsafe_allow_html=True)
+    time.sleep(1.5)
+
     try:
         df = pd.read_csv(url)
-        columna = df.columns[1]
-        respuestas = df[columna].dropna().astype(str)
+        respuestas = df.iloc[:,1].dropna().astype(str)
 
-        if len(respuestas) < 2:
-            st.warning("No hay suficientes respuestas.")
-            st.stop()
-
-        # LIMPIEZA
         respuestas_limpias = [limpiar(r) for r in respuestas]
 
-        # STOPWORDS MEJORADAS
-        stopwords = [
-            "de","la","que","el","en","y","a","los","del","se",
-            "las","por","un","para","con","no","una","me","mi",
-            "tu","te","es","lo","como","pero","más","ya"
-        ]
+        stopwords = ["de","la","que","el","en","y","a","los","del","se"]
 
-        # VECTORIZACIÓN
-        vectorizer = TfidfVectorizer(
-            stop_words=stopwords,
-            ngram_range=(1,2),
-            min_df=1
-        )
-
-        X = vectorizer.fit_transform(respuestas_limpias)
-
-        # 🔥 MEJOR K AUTOMÁTICO
-        k = obtener_mejor_k(X)
-
-        modelo = KMeans(n_clusters=k, random_state=42, n_init=10)
-        modelo.fit(X)
-
-        terminos = vectorizer.get_feature_names_out()
-        orden = modelo.cluster_centers_.argsort()[:, ::-1]
-
-        # =========================
-        # MÉTRICAS
-        # =========================
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Respuestas", len(respuestas))
-        col2.metric("Clusters", k)
-        col3.metric("Keywords", len(terminos))
-
-        # =========================
-        # TEMAS
-        # =========================
-        st.markdown("### 🧠 Temas detectados")
-
-        cols = st.columns(k)
         temas = []
 
-        for i in range(k):
-            palabras = [terminos[ind] for ind in orden[i, :6]]
-            palabras = [p for p in palabras if len(p) > 3]
-
-            temas.extend(palabras)
-
-            with cols[i]:
-                st.markdown(f"""
-                <div class="card">
-                <h4>Grupo {i+1}</h4>
-                <p>{", ".join(palabras)}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
         # =========================
-        # ANÁLISIS SEMÁNTICO
+        # 🧠 IA HÍBRIDA
         # =========================
-        categorias = {
-            "lugar": ["cena","restaurante","cafe","picnic"],
-            "detalle": ["flores","regalo","carta"],
-            "ambiente": ["romantico","sorpresa","especial"],
-            "extra": ["musica","mariachi","velas"]
-        }
+        if len(respuestas) >= 5:
 
-        resultados = {c: [] for c in categorias}
+            vectorizer = TfidfVectorizer(stop_words=stopwords, ngram_range=(1,2))
+            X = vectorizer.fit_transform(respuestas_limpias)
 
-        for r in respuestas_limpias:
-            for cat, palabras in categorias.items():
-                for p in palabras:
-                    if p in r:
-                        resultados[cat].append(p)
+            k = mejor_k(X)
 
-        final = {
-            cat: Counter(lst).most_common(1)[0][0]
-            for cat, lst in resultados.items() if lst
-        }
+            modelo = KMeans(n_clusters=k, random_state=42, n_init=10)
+            modelo.fit(X)
 
-        top = [p for p, _ in Counter(temas).most_common(3)]
+            terms = vectorizer.get_feature_names_out()
+            order = modelo.cluster_centers_.argsort()[:, ::-1]
 
-        # =========================
-        # RESULTADO FINAL
-        # =========================
-        st.markdown("### 💡 Propuesta generada")
+            placeholder.empty()
 
-        if final:
-            partes = []
+            st.markdown("### 🧠 Insights detectados")
+            cols = st.columns(k)
 
-            if "lugar" in final:
-                partes.append(f"una {final['lugar']}")
-            if "detalle" in final:
-                partes.append(f"con {final['detalle']}")
-            if "ambiente" in final:
-                partes.append(f"en un ambiente {final['ambiente']}")
-            if "extra" in final:
-                partes.append(f"incluyendo {final['extra']}")
+            for i in range(k):
+                palabras = [terms[ind] for ind in order[i, :5]]
+                palabras = [p for p in palabras if len(p) > 3]
 
-            texto = "Una propuesta ideal sería "
+                temas.extend(palabras)
 
-            if len(partes) > 1:
-                texto += ", ".join(partes[:-1]) + " y " + partes[-1]
-            else:
-                texto += partes[0]
-
-            if top:
-                texto += f", inspirada en {', '.join(top)}"
-
-            st.markdown(f"""
-            <div class="card" style="border-left: 5px solid #007BFF;">
-            <p style="font-size:18px;">{texto}</p>
-            </div>
-            """, unsafe_allow_html=True)
+                with cols[i]:
+                    st.markdown(f"""
+                    <div class="card">
+                    <h4>Grupo {i+1}</h4>
+                    <p>{", ".join(palabras)}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
         else:
-            st.warning("No se pudo generar propuesta.")
+            placeholder.empty()
+
+            palabras = " ".join(respuestas_limpias).split()
+            conteo = Counter(p for p in palabras if p not in stopwords and len(p) > 3)
+
+            temas = [p for p, _ in conteo.most_common(5)]
+
+            st.markdown("### ⚡ Insights rápidos")
+            st.markdown(f"<div class='card'>{', '.join(temas)}</div>", unsafe_allow_html=True)
+
+        # =========================
+        # 🎯 PROPUESTA INTELIGENTE
+        # =========================
+        st.markdown("### 💡 Recomendación IA")
+
+        top = temas[:3]
+
+        texto = "Una experiencia ideal sería "
+        if top:
+            texto += f"basada en {', '.join(top)}, "
+
+        texto += "diseñada para crear un momento especial y memorable."
+
+        st.markdown(f"""
+        <div class="card" style="border-left:5px solid {accent};">
+        <p style="font-size:18px;">{texto}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # =========================
+        # 📊 MÉTRICAS
+        # =========================
+        col1, col2 = st.columns(2)
+        col1.metric("Respuestas", len(respuestas))
+        col2.metric("Ideas detectadas", len(set(temas)))
 
     except Exception as e:
+        placeholder.empty()
         st.error(f"Error: {e}")
