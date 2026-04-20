@@ -8,7 +8,7 @@ from sklearn.cluster import KMeans
 # =========================
 # ⚙️ CONFIG
 # =========================
-st.set_page_config(page_title="💍 Propuestas", layout="wide")
+st.set_page_config(page_title="Propuestas", layout="wide")
 
 # =========================
 # 🎨 ESTILO SOFT UI + ANIMACIONES
@@ -104,7 +104,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # =========================
 # 🚀 BOTÓN
 # =========================
-if st.button("✨ Analizar"):
+if st.button("Analizar"):
 
     try:
         df = pd.read_csv(url)
