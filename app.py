@@ -149,7 +149,7 @@ if st.button("Analizar"):
             terminos = vectorizer.get_feature_names_out()
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("🧠 Temas detectados")
+            st.subheader("Temas detectados")
 
             cols = st.columns(k)
 
