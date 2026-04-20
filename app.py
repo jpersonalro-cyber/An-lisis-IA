@@ -27,18 +27,6 @@ body {
     to {opacity: 1; transform: translateY(0);}
 }
 
-/* Tarjetas */
-.card {
-    background: #476573;
-    border-radius: 25px;
-    padding: 20px;
-    margin-bottom: 25px;
-    box-shadow: 10px 10px 20px #c5c5c5,
-                -10px -10px 20px #ffffff;
-    animation: fadeIn 0.8s ease forwards;
-    transition: all 0.3s ease;
-}
-
 /* Hover */
 .card:hover {
     transform: scale(1.04);
@@ -49,8 +37,8 @@ body {
 /* Botón */
 .stButton>button {
     background-color: #222;
-    color: blue;
-    border-radius: 8px;
+    color: white;
+    border-radius: 15px;
     height: 55px;
     width: 100%;
     font-size: 18px;
