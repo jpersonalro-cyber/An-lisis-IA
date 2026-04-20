@@ -29,7 +29,7 @@ body {
 
 /* Tarjetas */
 .card {
-    background: #e6e6e6;
+    background: #476573;
     border-radius: 25px;
     padding: 20px;
     margin-bottom: 25px;
@@ -50,7 +50,7 @@ body {
 .stButton>button {
     background-color: #222;
     color: white;
-    border-radius: 15px;
+    border-radius: 8px;
     height: 55px;
     width: 100%;
     font-size: 18px;
@@ -89,7 +89,7 @@ body {
 """, unsafe_allow_html=True)
 
 # =========================
-# 💍 HEADER
+#  HEADER
 # =========================
 st.markdown('<div class="title">Propuestas Inteligentes</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Análisis con IA de ideas románticas</div>', unsafe_allow_html=True)
@@ -102,7 +102,7 @@ url = st.text_input("📎 Pega el link CSV de tu formulario")
 st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================
-# 🚀 BOTÓN
+#  BOTÓN
 # =========================
 if st.button("Analizar"):
 
